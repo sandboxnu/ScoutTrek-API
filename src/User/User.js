@@ -163,7 +163,7 @@ export const resolvers = {
     addGroup: authenticated(async (_, { input }, { user, User, Troop }) => {
       const newGroupID = mongoose.Types.ObjectId();
 
-      await Troop.findById(input.troopID, function (err, doc) {
+      Troop.findById(input.troopID, function (err, doc) {
         if (input.role === "SCOUTMASTER") {
           doc.scoutMaster = user.id;
         }
@@ -176,7 +176,7 @@ export const resolvers = {
         doc.save();
       });
 
-      await User.findById(user.id, function (err, doc) {
+      User.findById(user.id, function (err, doc) {
         if (err) return false;
         const { children, ...membershipDetails } = input;
         doc.children.push(...children);
@@ -191,6 +191,7 @@ export const resolvers = {
     updateUser: authenticated(
       authorized("SCOUTMASTER", async (_, { input, id }, { User }) => {
         if (typeof input.password === "string") {
+          // Note: this might be broken and its also weird
           input.password = await User.findById(id, function (err, doc) {
             if (err) return false;
             doc.password = input.password;
@@ -213,8 +214,8 @@ export const resolvers = {
     deleteCurrUser: authenticated(
       async (_, { id }, { User }) => await User.findByIdAndDelete(id)
     ),
-    dismissNotification: authenticated(async (_, { id }, { user, User }) => {
-      await User.findById(user.id, function (err, doc) {
+    dismissNotification: authenticated((_, { id }, { user, User }) => {
+      User.findById(user.id, function (err, doc) {
         if (err) return false;
 
         if (doc?.unreadNotifications) {

@@ -39,14 +39,14 @@ export const getUserNotificationData = async (Troop, User, troopID) => {
   return userData;
 };
 
-export const sendNotifications = async (userData, body, data) => {
+export const sendNotifications = (userData, body, data) => {
   let messages = [];
   for (let user of userData) {
     const { userID, token } = user;
 
     let notificationData;
 
-    await User.findById(userID, function (err, doc) {
+    User.findById(userID, function (err, doc) {
       if (err) return false;
       const notification = {
         title: body,

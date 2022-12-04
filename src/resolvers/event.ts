@@ -23,6 +23,7 @@ import EventSchemas from '../Event/EventSchemas.json';
 import { sendNotifications } from '../notifications';
 
 import type { ContextType } from '../context';
+import { EVENT_SCHEMAS } from '../utils/EventSchemas';
 @InputType()
 class AddRosterInput {
   @Field(type => [ID])
@@ -140,6 +141,20 @@ const EventSchemaScalar = new GraphQLScalarType({
   }
 })
 
+const EventSchemaScalar2 = new GraphQLScalarType({
+  name: "EventFormSchema",
+  description: "scalar for event schema",
+  serialize(value: Object) {
+    return value;
+  },
+  parseValue(value: Object) {
+    return value;
+  },
+  parseLiteral(value) {
+    return value;
+  }
+})
+
 @Resolver(of => Event)
 export class EventResolver {
   // what is the json in resolvers??? 
@@ -193,6 +208,13 @@ export class EventResolver {
   eventSchemas(): Object {
     // TODO: fix return type once jaron is done correcting the type
     return EventSchemas;
+  }
+
+  // TODO: replace above with this
+  @Query(returns => EventSchemaScalar2)
+  eventFormSchemas(): Object {
+    // TODO: jaron is currently working on correcting the type
+    return EVENT_SCHEMAS;
   }
 
   @Authorized()

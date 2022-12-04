@@ -34,6 +34,7 @@ type OptionsFieldType = 'options';
 interface TitledItem {
   id: string;
   title: string;
+  subtitle?: string;
 }
 
 export type Dict<K extends string, V> = {

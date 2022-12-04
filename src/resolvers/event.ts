@@ -24,6 +24,7 @@ import { sendNotifications } from '../notifications';
 
 import type { ContextType } from '../context';
 import { EVENT_SCHEMAS } from '../utils/EventSchemas';
+import type { FormInput } from 'src/utils/FormTypes';
 @InputType()
 class AddRosterInput {
   @Field(type => [ID])
@@ -44,6 +45,17 @@ class UpdateLocationInput {
   lng: number;
   @Field({nullable: true})
   address?: string;
+}
+
+@InputType()
+class CreateEventInput {
+  @Field(type => EVENT_TYPE)
+  type!: EVENT_TYPE;
+  // TODO: create a scalar for FormInput
+  @Field(type => FormInput)
+  fields!: FormInput;
+  @Field(type => Boolean, { nullable: true })
+  published?: boolean;
 }
 
 @InputType()
@@ -227,6 +239,7 @@ export class EventResolver {
     return await ctx.EventModel.findByIdAndDelete(id);
   }
 
+  // TODO: make an endpoint for CreateEventInput
   @Authorized()
   @Mutation(returns => Event)
   async addEvent(

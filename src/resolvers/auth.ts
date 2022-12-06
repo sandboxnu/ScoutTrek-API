@@ -92,9 +92,9 @@ export class AuthResolver {
       throw new Error("Please provide an email and password.");
     }
 
-    const user = await ctx.UserModel.findOne({ email }).select("+password");
+    const user = await ctx.UserModel.findOne({ email });
 
-    if (!user || !(await user.isValidPassword(password, user.password))) {
+    if (!user || !(await user.isValidPassword(password))) {
       throw new Error("Invalid login");
     }
 

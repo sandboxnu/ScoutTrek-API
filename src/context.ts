@@ -11,12 +11,12 @@ import { getUserNotificationData, UserData } from './notifications';
 import * as authFns from './utils/Auth';
 
 import type { ReturnModelType } from '@typegoose/typegoose';
+import { ExpressContext } from 'apollo-server-express';
 
-export interface ContextType {
+export interface ContextType extends ExpressContext {
 	UserModel: ReturnModelType<typeof User>,
 	EventModel: ReturnModelType<typeof Event>,
 	TroopModel: ReturnModelType<typeof Troop>,
-	req?: Request,
 	authFns: typeof authFns,
 	tokens?: UserData[] | null,
 	membershipIDString?: string,
@@ -24,15 +24,15 @@ export interface ContextType {
 	user?: DocumentType<User>
 }
 
-const contextFn: ContextFunction = async ({ req }) => {
+const contextFn: ContextFunction<ContextType> = async ({ req, res }) => {
     let ret: ContextType = {
         UserModel,
         EventModel,
         TroopModel,
         req,
+        res,
         authFns
     };
-
     const token = authFns.getTokenFromReq(req);
     if (!token) {
         return ret;

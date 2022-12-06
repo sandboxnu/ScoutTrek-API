@@ -60,7 +60,7 @@ export class User {
       validator: function (el: string) {
         return el === this.password;
       },
-      message: "Passwords are not equal :("
+      message: "Passwords do not match"
     }
   })
   public passwordConfirm?: string;
@@ -117,9 +117,8 @@ export class User {
    * TODO:
    */
   public async isValidPassword(
-    submittedPass: string,
-    realPass: string
+    submittedPass: string
   ): Promise<boolean> {
-    return await bcrypt.compare(submittedPass, realPass);
+    return await bcrypt.compare(submittedPass, this.password);
   }
 }

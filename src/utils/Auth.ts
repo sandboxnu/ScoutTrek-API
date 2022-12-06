@@ -5,7 +5,7 @@ import { AuthChecker, ResolverData } from 'type-graphql';
 import { UserModel } from '../../models/models';
 import { ROLE } from '../../models/TroopAndPatrol';
 import { User } from '../../models/User';
-import { UnauthorizedError } from '../errors/UnauthorizedError';
+import UnauthorizedError from '../errors/UnauthorizedError';
 
 import type { ContextType } from '../context';
 import type { DocumentType } from "@typegoose/typegoose";

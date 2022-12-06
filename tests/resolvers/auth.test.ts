@@ -13,6 +13,9 @@ import { UserResolver } from '../../src/resolvers/user';
 import * as authFns from '../../src/utils/Auth';
 import { setupDB } from '../test_setup';
 
+import { createTestClient } from 'apollo-server-integration-testing';
+import mongoose from 'mongoose';
+
 setupDB('scouttrek-test');
 
 const schema = buildSchemaSync({
@@ -25,6 +28,10 @@ const schema = buildSchemaSync({
 const server = new ApolloServer({
   schema,
   context: contextFn,
+});
+
+const { mutate } = createTestClient({
+  apolloServer: server
 });
 
 describe("User signup", () => {
@@ -56,22 +63,46 @@ describe("User signup", () => {
           }
         }
       `;
-      response = await server.executeOperation({
-        query: createUser,
-      });
+      response = await mutate(createUser);
     });
 
-    test('correct fields should be returned', async () => {
+    it('should return the correct values for the requested fields', async () => {
       const createdUser = response.data?.signup.user;
       expect(createdUser.name).toBe("Test User");
       expect(createdUser.email).toBe("test@example.com");
       expect(createdUser.phone).toBe("1234567890");
       expect(new Date(createdUser.birthday).getTime()).toBe(new Date("2000-12-12").getTime());
+      expect(response.data?.signup.token).toBe(authFns.createToken({id: createdUser.id}));
+      expect(response.data?.signup.noGroups).toBe(true);
     });
 
-    test('user should be created in the db', async () => {
+    it('should create the user in the db', async () => {
       const count = await UserModel.count({ _id: response.data?.signup.user.id });
       expect(count).toBe(1);
     });
+  });
+
+  it('should fail if passwords do not match', async () => {
+    const createUser = gql`
+      mutation {
+        signup(
+          input: {
+            name: "Test User"
+            email: "test@example.com"
+            password: "password1"
+            passwordConfirm: "password2"
+            phone: "1234567890"
+            birthday: "2000-12-12"
+          }
+        ) {
+          token
+        }
+      }
+    `;
+    const result = await server.executeOperation({
+      query: createUser,
+    });
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors![0]?.message).toBe("User validation failed: passwordConfirm: Passwords do not match")
   });
 });

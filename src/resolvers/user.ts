@@ -1,3 +1,4 @@
+import bcrypt from 'bcrypt';
 import mongoose, { Error } from 'mongoose';
 import {
   Arg,
@@ -17,11 +18,12 @@ import {
 
 import { Membership, Patrol, ROLE, Troop } from '../../models/TroopAndPatrol';
 import { User } from '../../models/User';
+import ForbiddenError from '../errors/ForbiddenError';
 
 import type { ContextType } from '../context';
 
 @InputType()
-class AddMembershipInput implements Partial<Membership>{
+class AddMembershipInput implements Partial<Membership> {
   @Field(type => ID)
   troopID!: mongoose.Types.ObjectId;
 
@@ -60,8 +62,6 @@ class UpdateUserInput { // implements Partial<User>
   phone?: string;
   @Field({nullable: true})
   birthday?: Date;
-  @Field(type => ROLE, {nullable: true})
-  role?: ROLE;
   @Field(type => [AddMembershipInput], {nullable: true})
   groups?: AddMembershipInput[];
   @Field(type => [String], {nullable: true})
@@ -136,23 +136,21 @@ export class UserResolver {
     };
   }
 
-  @Authorized([ROLE.SCOUTMASTER])
+  @Authorized()
   @Mutation(returns => User)
   async updateUser(
     @Arg("input") input: UpdateUserInput,
-    @Arg("id", type => ID) id: mongoose.Types.ObjectId,
+    @Arg("id", type => ID) id: string,
     @Ctx() ctx: ContextType
   ): Promise<User> {
-    if (input.password) {
-      const userDoc = await ctx.UserModel.findById(id);
-      if (!userDoc) {
-        throw new Error("No such user")
-      }
-      userDoc.password = input.password;
-      userDoc.save();
-      delete input.password;
+    if (id !== ctx.user!._id.toString()) {
+      throw new ForbiddenError("Can't update a different user");
     }
-    const userDoc = await ctx.UserModel.findByIdAndUpdate(id, { ...input }, { new: true });
+    // If password is changed, hash it since findAndUpdate doesn't call pre-save
+    if (input.password) {
+      input.password = await bcrypt.hash(input.password, 12);
+    }
+    const userDoc = await ctx.UserModel.findByIdAndUpdate(id, input, { new: true });
     if (!userDoc) {
       throw new Error("No such user");
     }

@@ -30,7 +30,7 @@ async function startServer() {
     const serverResponse = app.listen(port);
     resolve(serverResponse);
   });
-  console.log(`🚀 Server ready at http://localhost:4000/graphql`);
+  console.log(`🚀 Server ready at http://localhost:${port}/graphql`);
 }
 
 startServer();

@@ -21,7 +21,7 @@ export interface ContextType {
 	tokens?: UserData[] | null,
 	membershipIDString?: string,
 	currMembership?: DocumentType<Membership>,
-	user?: DocumentType<User>
+	user?: DocumentType<User>,
 }
 
 const contextFn: ContextFunction<[ExpressContextFunctionArgument]> = async ({ req }) => {

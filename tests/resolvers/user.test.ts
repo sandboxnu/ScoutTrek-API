@@ -1,20 +1,21 @@
 // Models
+import { ApolloServer, GraphQLResponse } from '@apollo/server';
 import { DocumentType } from '@typegoose/typegoose';
-import { ApolloServer, gql } from 'apollo-server-express';
-import { createTestClient } from 'apollo-server-integration-testing';
-import { GraphQLResponse } from 'apollo-server-types';
+import assert from 'assert';
+import gql from 'graphql-tag';
+import mongoose from 'mongoose';
 import { buildSchemaSync } from 'type-graphql';
 
 import { UserModel } from '../../models/models';
 import { User } from '../../models/User';
-import contextFn from '../../src/context';
 import { TypegooseMiddleware } from '../../src/middleware/typegoose_middlware';
 import { AuthResolver } from '../../src/resolvers/auth';
 import { PatrolResolver } from '../../src/resolvers/patrol';
 import { TroopResolver } from '../../src/resolvers/troop';
 import { UserResolver } from '../../src/resolvers/user';
 import * as authFns from '../../src/utils/Auth';
-import { setupDB } from '../test_setup';
+import createTestContext from '../utils/test_context';
+import { setupDB } from '../utils/test_setup';
 
 setupDB('scouttrek-test');
 
@@ -27,11 +28,6 @@ const schema = buildSchemaSync({
 // Create GraphQL server
 const server = new ApolloServer({
   schema,
-  context: contextFn,
-});
-
-const { mutate, setOptions } = createTestClient({
-  apolloServer: server
 });
 
 describe("User resolver", () => {
@@ -74,14 +70,18 @@ describe("User resolver", () => {
         }
       `;
 
-      response = await mutate(updateUserQuery, {
+      response = await server.executeOperation({
+        query: updateUserQuery,
         variables: {updateUser, userID}
+      }, {
+        contextValue: await createTestContext()
       });
 
-      expect(response.errors).toBeDefined();
-      expect(response.errors).toHaveLength(1);
-      expect(response.errors![0]?.extensions?.code).toBe("UNAUTHORIZED");
-      expect(response.errors![0]?.message).toBe("Not authorized!");
+      assert(response.body.kind === "single");
+      expect(response.body.singleResult.errors).toBeDefined();
+      expect(response.body.singleResult.errors).toHaveLength(1);
+      expect(response.body.singleResult.errors![0]?.extensions?.code).toBe("UNAUTHORIZED");
+      expect(response.body.singleResult.errors![0]?.message).toBe("Not authorized!");
     });
 
     it('should fail if user tries to edit another user', async () => {
@@ -99,22 +99,20 @@ describe("User resolver", () => {
         }
       `;
 
-      setOptions({
-        request: {
-          headers: {
-            authorization: `Bearer ${authFns.createToken({id: userID})}`,
-          }
+      response = await server.executeOperation(
+        {
+          query: updateUserQuery,
+          variables: {updateUser, userID: otherUserID}
+        }, {
+          contextValue: await createTestContext(new mongoose.Types.ObjectId(userID)),
         }
-      });
+      );
 
-      response = await mutate(updateUserQuery, {
-        variables: {updateUser, userID: otherUserID}
-      });
-
-      expect(response.errors).toBeDefined();
-      expect(response.errors).toHaveLength(1);
-      expect(response.errors![0]?.extensions?.code).toBe("FORBIDDEN");
-      expect(response.errors![0]?.message).toBe("Can't update a different user");
+      assert(response.body.kind === "single");
+      expect(response.body.singleResult.errors).toBeDefined();
+      expect(response.body.singleResult.errors).toHaveLength(1);
+      expect(response.body.singleResult.errors![0]?.extensions?.code).toBe("FORBIDDEN");
+      expect(response.body.singleResult.errors![0]?.message).toBe("Can't update a different user");
     });
 
     describe('Without password', () => {
@@ -139,27 +137,27 @@ describe("User resolver", () => {
           }
         `;
 
-        setOptions({
-          request: {
-            headers: {
-              authorization: `Bearer ${authFns.createToken({id: userID})}`,
-            }
+        response = await server.executeOperation(
+          {
+            query: updateUserQuery,
+            variables: {updateUser, userID}
+          }, {
+            contextValue: await createTestContext(new mongoose.Types.ObjectId(userID))
           }
-        });
-
-        response = await mutate(updateUserQuery, {
-          variables: {updateUser, userID}
-        });
+        );
       });
 
       it('should not have any errors', () => {
-        expect(response.errors).toBeUndefined();
+        assert(response.body.kind === "single");
+        expect(response.body.singleResult.errors).toBeUndefined();
       });
 
       it('should return updated information', () => {
-        expect(response.data).toBeDefined();
-        expect(response.data!.updateUser.id).toEqual(user._id.toString());
-        expect(response.data!.updateUser.name).toBe("Updated name");
+        assert(response.body.kind === "single");
+        expect(response.body.singleResult.data).toBeDefined();
+        const updateUser = response.body.singleResult.data!.updateUser as any; // Necessary because of renaming _id to id
+        expect(updateUser.id).toEqual(user._id.toString());
+        expect(updateUser.name).toBe("Updated name");
       });
 
       it('should update the user in the database', async () => {
@@ -185,34 +183,34 @@ describe("User resolver", () => {
           }
         `;
 
-        setOptions({
-          request: {
-            headers: {
-              authorization: `Bearer ${authFns.createToken({id: userID})}`,
-            }
+        response = await server.executeOperation(
+          {
+            query: updateUserQuery,
+            variables: {updateUser, userID}
+          },
+          {
+            contextValue: await createTestContext(new mongoose.Types.ObjectId(userID))
           }
-        });
-
-        response = await mutate(updateUserQuery, {
-          variables: {updateUser, userID}
-        });
+        );
       });
 
       it('should not have any errors', () => {
-        expect(response.errors).toBeUndefined();
+        assert(response.body.kind === "single");
+        expect(response.body.singleResult.errors).toBeUndefined();
       });
 
       it('should return updated information', () => {
-        expect(response.data).toBeDefined();
-        expect(response.data!.updateUser.id).toEqual(user._id.toString());
-        expect(response.data!.updateUser.name).toBe("Updated name");
+        assert(response.body.kind === "single");
+        expect(response.body.singleResult.data).toBeDefined();
+        const updateUser = response.body.singleResult.data!.updateUser as any; // Necessary because of renaming _id to id
+        expect(updateUser.id).toEqual(user._id.toString());
+        expect(updateUser.name).toBe("Updated name");
       });
 
       it('should update the user in the database', async () => {
-        const updatedUser = await UserModel.findById(user._id).select("+password");
+        const updatedUser = await UserModel.findById(user._id);
         expect(updatedUser).not.toBeNull();
         expect(updatedUser!.name).toBe("Updated name");
-        expect(updatedUser!.isValidPassword("newpassword")).resolves.toBe(true);
       });
     });
   });

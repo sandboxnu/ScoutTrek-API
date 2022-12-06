@@ -1,4 +1,6 @@
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
+import { GraphQLError } from 'graphql';
 import mongoose, { Error } from 'mongoose';
 import {
   Arg,
@@ -18,7 +20,6 @@ import {
 
 import { Membership, Patrol, ROLE, Troop } from '../../models/TroopAndPatrol';
 import { User } from '../../models/User';
-import ForbiddenError from '../errors/ForbiddenError';
 
 import type { ContextType } from '../context';
 
@@ -144,7 +145,11 @@ export class UserResolver {
     @Ctx() ctx: ContextType
   ): Promise<User> {
     if (id !== ctx.user!._id.toString()) {
-      throw new ForbiddenError("Can't update a different user");
+      throw new GraphQLError("Can't update a different user", {
+        extensions: {
+          code: "FORBIDDEN",
+        },
+      });
     }
     // If password is changed, hash it since findAndUpdate doesn't call pre-save
     if (input.password) {
@@ -190,6 +195,21 @@ export class UserResolver {
     return true;
   }
   
+  @Mutation(returns => String)
+  async requestPasswordReset(
+    @Arg("email") email: string,
+    @Ctx() ctx: ContextType
+  ): Promise<string> {
+    const user = await ctx.UserModel.findOne({email});
+    if (!user) {
+      return "no";
+    }
+    
+    const resetID = crypto.randomUUID();
+
+    console.log(resetID);
+    return resetID;
+  }
 
   @Authorized()
   @FieldResolver(returns => ROLE, {nullable: true})

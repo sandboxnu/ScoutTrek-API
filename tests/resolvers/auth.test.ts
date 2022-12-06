@@ -12,8 +12,8 @@ import { PatrolResolver } from '../../src/resolvers/patrol';
 import { TroopResolver } from '../../src/resolvers/troop';
 import { UserResolver } from '../../src/resolvers/user';
 import * as authFns from '../../src/utils/Auth';
-import { setupDB } from '../test_setup';
 import createTestContext from '../utils/test_context';
+import { setupDB } from '../utils/test_setup';
 
 setupDB('scouttrek-test');
 
@@ -67,7 +67,7 @@ describe("User signup", () => {
     test('correct fields should be returned', async () => {
       assert(response.body.kind === 'single');
       const signupResponse = response.body.singleResult.data?.signup as SignupPayload;
-      const createdUser = signupResponse.user as any;
+      const createdUser = signupResponse.user as any; // Necessary because of renaming _id to id
       expect(createdUser.name).toBe("Test User");
       expect(createdUser.email).toBe("test@example.com");
       expect(createdUser.phone).toBe("1234567890");
@@ -78,7 +78,7 @@ describe("User signup", () => {
 
     test('user should be created in the db', async () => {
       assert(response.body.kind === 'single');
-      const signupResponse = response.body.singleResult.data?.signup as any;
+      const signupResponse = response.body.singleResult.data?.signup as any; // Necessary because of renaming _id to id
       const count = await UserModel.count({ _id: signupResponse.user.id });
       expect(count).toBe(1);
     });
@@ -103,6 +103,8 @@ describe("User signup", () => {
     `;
     const result = await server.executeOperation({
       query: createUser,
+    }, {
+      contextValue: await createTestContext()
     });
     assert(result.body.kind === "single");
     expect(result.body.singleResult.errors).toHaveLength(1);

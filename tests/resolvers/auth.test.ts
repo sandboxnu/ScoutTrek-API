@@ -1,20 +1,19 @@
 // Models
-import { ApolloServer, gql } from 'apollo-server-express';
-import { GraphQLResponse } from 'apollo-server-types';
+import { ApolloServer, GraphQLResponse } from '@apollo/server';
+import assert from 'assert';
+import { gql } from 'graphql-tag';
+import { ContextType } from 'src/context';
 import { buildSchemaSync } from 'type-graphql';
 
 import { UserModel } from '../../models/models';
-import contextFn from '../../src/context';
 import { TypegooseMiddleware } from '../../src/middleware/typegoose_middlware';
-import { AuthResolver } from '../../src/resolvers/auth';
+import { AuthResolver, SignupPayload } from '../../src/resolvers/auth';
 import { PatrolResolver } from '../../src/resolvers/patrol';
 import { TroopResolver } from '../../src/resolvers/troop';
 import { UserResolver } from '../../src/resolvers/user';
 import * as authFns from '../../src/utils/Auth';
 import { setupDB } from '../test_setup';
-
-import { createTestClient } from 'apollo-server-integration-testing';
-import mongoose from 'mongoose';
+import createTestContext from '../utils/test_context';
 
 setupDB('scouttrek-test');
 
@@ -25,13 +24,8 @@ const schema = buildSchemaSync({
 });
 
 // Create GraphQL server
-const server = new ApolloServer({
+const server = new ApolloServer<ContextType>({
   schema,
-  context: contextFn,
-});
-
-const { mutate } = createTestClient({
-  apolloServer: server
 });
 
 describe("User signup", () => {
@@ -63,21 +57,29 @@ describe("User signup", () => {
           }
         }
       `;
-      response = await mutate(createUser);
+      response = await server.executeOperation({
+        query: createUser,
+      }, {
+        contextValue: await createTestContext(),
+      });
     });
 
-    it('should return the correct values for the requested fields', async () => {
-      const createdUser = response.data?.signup.user;
+    test('correct fields should be returned', async () => {
+      assert(response.body.kind === 'single');
+      const signupResponse = response.body.singleResult.data?.signup as SignupPayload;
+      const createdUser = signupResponse.user as any;
       expect(createdUser.name).toBe("Test User");
       expect(createdUser.email).toBe("test@example.com");
       expect(createdUser.phone).toBe("1234567890");
-      expect(new Date(createdUser.birthday).getTime()).toBe(new Date("2000-12-12").getTime());
-      expect(response.data?.signup.token).toBe(authFns.createToken({id: createdUser.id}));
-      expect(response.data?.signup.noGroups).toBe(true);
+      expect(new Date(createdUser.birthday!).getTime()).toBe(new Date("2000-12-12").getTime());
+      expect(signupResponse.token).toBe(authFns.createToken({id: createdUser.id}));
+      expect(signupResponse.noGroups).toBe(true);
     });
 
-    it('should create the user in the db', async () => {
-      const count = await UserModel.count({ _id: response.data?.signup.user.id });
+    test('user should be created in the db', async () => {
+      assert(response.body.kind === 'single');
+      const signupResponse = response.body.singleResult.data?.signup as any;
+      const count = await UserModel.count({ _id: signupResponse.user.id });
       expect(count).toBe(1);
     });
   });
@@ -102,7 +104,8 @@ describe("User signup", () => {
     const result = await server.executeOperation({
       query: createUser,
     });
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors![0]?.message).toBe("User validation failed: passwordConfirm: Passwords do not match")
+    assert(result.body.kind === "single");
+    expect(result.body.singleResult.errors).toHaveLength(1);
+    expect(result.body.singleResult.errors![0]?.message).toBe("User validation failed: passwordConfirm: Passwords do not match")
   });
 });

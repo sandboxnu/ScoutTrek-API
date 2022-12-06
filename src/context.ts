@@ -1,5 +1,5 @@
 import { DocumentType } from '@typegoose/typegoose';
-import { ContextFunction } from 'apollo-server-core';
+import { ContextFunction } from '@apollo/server';
 import { Request } from 'express';
 import mongoose from 'mongoose';
 
@@ -11,6 +11,7 @@ import { getUserNotificationData, UserData } from './notifications';
 import * as authFns from './utils/Auth';
 
 import type { ReturnModelType } from '@typegoose/typegoose';
+import { ExpressContextFunctionArgument } from '@apollo/server/dist/esm/express4';
 
 export interface ContextType {
 	UserModel: ReturnModelType<typeof User>,
@@ -24,7 +25,7 @@ export interface ContextType {
 	user?: DocumentType<User>
 }
 
-const contextFn: ContextFunction = async ({ req }) => {
+const contextFn: ContextFunction<[ExpressContextFunctionArgument]> = async ({ req }) => {
     let ret: ContextType = {
         UserModel,
         EventModel,

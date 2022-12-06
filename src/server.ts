@@ -1,4 +1,4 @@
-import { ApolloServer } from 'apollo-server-express';
+import { ApolloServer } from '@apollo/server';
 import mongoose from 'mongoose';
 import cron from 'node-cron';
 import { buildSchema } from 'type-graphql';
@@ -54,7 +54,6 @@ async function bootstrap() {
 		// Create GraphQL server
 		const server = new ApolloServer({
 			schema,
-			context: contextFn,
 		});
 
 		return server;

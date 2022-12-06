@@ -5,10 +5,10 @@ import { AuthChecker, ResolverData } from 'type-graphql';
 import { UserModel } from '../../models/models';
 import { ROLE } from '../../models/TroopAndPatrol';
 import { User } from '../../models/User';
-import { UnauthorizedError } from '../errors/UnauthorizedError';
 
 import type { ContextType } from '../context';
 import type { DocumentType } from "@typegoose/typegoose";
+import { GraphQLError } from 'graphql';
 
 const SECRET = "themfingsuperobvioussting";
 const DEFAULT_EXPIRES_IN = "55d";
@@ -67,7 +67,11 @@ export const customAuthChecker: AuthChecker<ContextType, ROLE> = (
   roles: ROLE[]
 ) => {
   if (!context.user) {
-    throw new UnauthorizedError('Not authorized!');
+    throw new GraphQLError('Not authorized!', {
+      extensions: {
+        code: 'UNAUTHORIZED',
+      },
+    });
   }
 
   return roles.length == 0 || context.currMembership !== undefined && roles.includes(context.currMembership.role);

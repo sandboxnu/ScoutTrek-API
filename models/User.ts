@@ -8,6 +8,7 @@ import { Notification } from './Notification';
 import { Membership } from './TroopAndPatrol';
 
 import type { ArraySubDocumentType, Ref } from "@typegoose/typegoose";
+import { UserModel } from './models';
 
 const DEFAULT_USER_PHOTO_URL = "https://res.cloudinary.com/wow-your-client/image/upload/c_scale,w_250/v1645286759/ScoutTrek/DefaultProfile.png";
 
@@ -119,6 +120,10 @@ export class User {
   public async isValidPassword(
     submittedPass: string
   ): Promise<boolean> {
-    return await bcrypt.compare(submittedPass, this.password);
+    const currPass = (await UserModel.findOne({ _id: this._id }).select("password"))?.password;
+    if (currPass === undefined) {
+      return false;
+    }
+    return await bcrypt.compare(submittedPass, currPass);
   }
 }

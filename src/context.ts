@@ -1,22 +1,22 @@
-import { DocumentType } from '@typegoose/typegoose';
 import { ContextFunction } from '@apollo/server';
-import { Request } from 'express';
+import { ExpressContextFunctionArgument } from '@apollo/server/dist/esm/express4';
+import { DocumentType } from '@typegoose/typegoose';
 import mongoose from 'mongoose';
 
 import { Event } from '../models/Event';
-import { EventModel, TroopModel, UserModel } from '../models/models';
+import { EventModel, TokenModel, TroopModel, UserModel } from '../models/models';
+import { Token } from '../models/Token';
 import { Membership, Troop } from '../models/TroopAndPatrol';
 import { User } from '../models/User';
 import { getUserNotificationData, UserData } from './notifications';
 import * as authFns from './utils/Auth';
 
 import type { ReturnModelType } from '@typegoose/typegoose';
-import { ExpressContextFunctionArgument } from '@apollo/server/dist/esm/express4';
-
 export interface ContextType {
 	UserModel: ReturnModelType<typeof User>,
 	EventModel: ReturnModelType<typeof Event>,
 	TroopModel: ReturnModelType<typeof Troop>,
+    TokenModel: ReturnModelType<typeof Token>,
 	authFns: typeof authFns,
 	tokens?: UserData[] | null,
 	membershipIDString?: string,
@@ -29,6 +29,7 @@ const contextFn: ContextFunction<[ExpressContextFunctionArgument]> = async ({ re
         UserModel,
         EventModel,
         TroopModel,
+        TokenModel,
         authFns
     };
     const token = authFns.getTokenFromReq(req);

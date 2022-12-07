@@ -18,6 +18,7 @@ import {
   Root,
 } from 'type-graphql';
 
+import { TOKEN_TYPE } from '../../models/Token';
 import { Membership, Patrol, ROLE, Troop } from '../../models/TroopAndPatrol';
 import { User } from '../../models/User';
 
@@ -67,6 +68,16 @@ class UpdateUserInput { // implements Partial<User>
   groups?: AddMembershipInput[];
   @Field(type => [String], {nullable: true})
   children?: string[];
+}
+
+@InputType()
+class ResetPasswordInput {
+  @Field()
+  email!: string;
+  @Field()
+  token!: string;
+  @Field()
+  password!: string;
 }
 
 @Resolver(of => User)
@@ -199,16 +210,41 @@ export class UserResolver {
   async requestPasswordReset(
     @Arg("email") email: string,
     @Ctx() ctx: ContextType
-  ): Promise<string> {
+  ): Promise<boolean> {
     const user = await ctx.UserModel.findOne({email});
     if (!user) {
-      return "no";
+      return true;
     }
-    
-    const resetID = crypto.randomUUID();
 
-    console.log(resetID);
-    return resetID;
+    const tok = await ctx.TokenModel.create({
+      type: TOKEN_TYPE.PASS_RESET,
+      user: user._id,
+      token: crypto.randomUUID(),
+    });
+
+    // send email
+    console.log(tok.token);
+
+    return true;
+  }
+
+  @Mutation(returns => User, {nullable: true})
+  async resetPassword(
+    @Arg("input") input: ResetPasswordInput,
+    @Ctx() ctx: ContextType
+  ): Promise<User | null> {
+    const user = await ctx.UserModel.findOne({email: input.email});
+    if (!user) {
+      return null;
+    }
+    const token = await ctx.TokenModel.findOne({user: {_id: user._id}, token: input.token, type: TOKEN_TYPE.PASS_RESET});
+    if (!token) {
+      return null;
+    }
+    user.password = input.password;
+    const ret = await user.save();
+    token.delete();
+    return ret;
   }
 
   @Authorized()

@@ -4,7 +4,6 @@ import cron from 'node-cron';
 import { buildSchema } from 'type-graphql';
 
 import { EventModel } from '../models/models';
-import contextFn from './context';
 import { TypegooseMiddleware } from './middleware/typegoose_middlware';
 import { getUserNotificationData, sendNotifications } from './notifications';
 import { AuthResolver } from './resolvers/auth';

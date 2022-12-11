@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { GraphQLError } from 'graphql';
 import mongoose, { Error } from 'mongoose';
+import * as EmailService from '../services/email';
 import {
   Arg,
   Authorized,
@@ -206,24 +207,24 @@ export class UserResolver {
     return true;
   }
   
-  @Mutation(returns => String)
-  async requestPasswordReset(
+  @Mutation()
+  requestPasswordReset(
     @Arg("email") email: string,
     @Ctx() ctx: ContextType
-  ): Promise<boolean> {
-    const user = await ctx.UserModel.findOne({email});
-    if (!user) {
-      return true;
-    }
-
-    const tok = await ctx.TokenModel.create({
-      type: TOKEN_TYPE.PASS_RESET,
-      user: user._id,
-      token: crypto.randomUUID(),
+  ): boolean {
+    ctx.UserModel.findOne({email}).then((user) => {
+      if (!user) {
+        return;
+      }
+      ctx.TokenModel.create({
+        type: TOKEN_TYPE.PASS_RESET,
+        user: user._id,
+        token: crypto.randomUUID(),
+      }).then((tok) => {
+        EmailService.sendResetPasswordEmail(email, tok.token);
+        console.log(tok);
+      });
     });
-
-    // send email
-    console.log(tok.token);
 
     return true;
   }

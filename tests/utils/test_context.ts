@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-import { EventModel, TroopModel, UserModel } from '../../models/models';
+import { EventModel, TroopModel, UserModel, TokenModel } from '../../models/models';
 import { ContextType } from '../../src/context';
 import * as authFns from '../../src/utils/Auth';
 
@@ -9,6 +9,7 @@ async function createTestContext(userID?: mongoose.Types.ObjectId, membershipIDS
         UserModel,
         EventModel,
         TroopModel,
+        TokenModel,
         authFns,
     };
 

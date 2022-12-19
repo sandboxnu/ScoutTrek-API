@@ -211,6 +211,8 @@ describe("User resolver", () => {
         const updatedUser = await UserModel.findById(user._id);
         expect(updatedUser).not.toBeNull();
         expect(updatedUser!.name).toBe("Updated name");
+        expect(!updatedUser!.isValidPassword("password"));
+        expect(updatedUser!.isValidPassword("newpassword"));
       });
     });
   });

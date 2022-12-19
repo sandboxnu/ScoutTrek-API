@@ -1,37 +1,33 @@
-import nodemailer from 'nodemailer';
-import mg from 'nodemailer-mailgun-transport';
 import handlebars from 'handlebars';
 import fs from 'fs';
 import path from 'path';
+import sgMail from '@sendgrid/mail';
 
 const templatesFolder = path.join(__dirname, '..', '..', 'templates');
 
 export async function sendResetPasswordEmail(email: string, token: string): Promise<boolean> {
     const emailTemplateSource = fs.readFileSync(path.join(templatesFolder, 'reset_password.hbs'), "utf8");
 
-    const mailgunAuth = {
-        auth: {
-            api_key: process.env.MAILGUN_API_KEY!,
-            domain: process.env.MAILGUN_DOMAIN!
-        }
-    }
-    
-    const smtpTransport = nodemailer.createTransport(mg(mailgunAuth));
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
+
     const template = handlebars.compile(emailTemplateSource);
     const htmlToSend = template({token})
 
-    const mailOptions = {
-        from: "info@scouttrek.com",
+    const msg = {
+        from: {
+            email: "info@scouttrek.com",
+            name: "ScoutTrek",
+        },
         to: email,
         subject: "ScoutTrek Password Reset",
         html: htmlToSend
     };
 
     try {
-        await smtpTransport.sendMail(mailOptions);
+        await sgMail.send(msg);
         return true;
     } catch (err) {
-        console.log("Uh oh", err);
+        console.error(err);
         return false;
     }
 }

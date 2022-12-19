@@ -225,7 +225,7 @@ export class UserResolver {
       });
     });
 
-    return true;
+    return true; // Always return true
   }
 
   @Mutation(returns => User, {nullable: true})

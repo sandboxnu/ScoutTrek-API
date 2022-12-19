@@ -6,7 +6,7 @@ import gql from 'graphql-tag';
 import mongoose from 'mongoose';
 import { buildSchemaSync } from 'type-graphql';
 
-import { UserModel } from '../../models/models';
+import { TokenModel, UserModel } from '../../models/models';
 import { User } from '../../models/User';
 import { TypegooseMiddleware } from '../../src/middleware/typegoose_middlware';
 import { AuthResolver } from '../../src/resolvers/auth';
@@ -215,5 +215,31 @@ describe("User resolver", () => {
         expect(updatedUser!.isValidPassword("newpassword"));
       });
     });
+  });
+
+  describe("Request password reset", () => {
+    let response: GraphQLResponse;
+
+    it('should do nothing if email does not exist', async () => {
+      const requestPasswordResetQuery = gql`
+        mutation requestPasswordReset($email: String!) {
+          requestPasswordReset(email: $email)
+        }
+      `;
+
+      response = await server.executeOperation({
+        query: requestPasswordResetQuery,
+        variables: {email: "doesnt@exist.com"}
+      }, {
+        contextValue: await createTestContext()
+      });
+
+      assert(response.body.kind === "single");
+      expect(response.body.singleResult.errors).toBeUndefined();
+      expect(response.body.singleResult.data!.requestPasswordReset).toBe(true);
+      expect(await TokenModel.count()).toBe(0);
+    });
+
+    // TODO: Should we mock the email service even though this is an end-to-end test?
   });
 });

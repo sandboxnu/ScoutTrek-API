@@ -222,7 +222,6 @@ export class UserResolver {
         token: crypto.randomUUID(),
       }).then((tok) => {
         EmailService.sendResetPasswordEmail(email, tok.token);
-        console.log(tok);
       });
     });
 

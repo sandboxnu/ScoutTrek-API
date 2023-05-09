@@ -197,14 +197,17 @@ export class EventResolver {
     return EventSchemas;
   }
 
-  @Authorized()
-  @Mutation(returns => Boolean)
+  @Authorized(ROLE.SCOUTMASTER, ROLE.ASST_SCOUTMASTER, ROLE.SENIOR_PATROL_LEADER, ROLE.PATROL_LEADER)
+  @Mutation(returns => Event)
   async deleteEvent(
     @Arg('id', type => ID) id: string,
     @Ctx() ctx: ContextType
-  ): Promise<boolean> {
-    await ctx.EventModel.findByIdAndDelete(id);
-    return true;
+  ): Promise<Event> {
+    const deletedEvent = await ctx.EventModel.findByIdAndDelete(id);
+    if (!deletedEvent) {
+      throw new Error("Event could not be found");
+    }
+    return deletedEvent;
   }
 
   @Authorized()
